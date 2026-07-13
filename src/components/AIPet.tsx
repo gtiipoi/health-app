@@ -138,12 +138,11 @@ export default function AIPet({ name, message, mood, style, onStyleChange, speak
     const cleanText = stripEmoji(message);
     if (!cleanText) return;
 
-    // Try cloned voice first
     const cloneSettings = getVoiceSettings();
-    if (cloneSettings) {
+    if (cloneSettings?.appId && cloneSettings?.token) {
       window.speechSynthesis.cancel();
       speakWithClonedVoice(cleanText).then(audio => {
-        if (audio) audio.play().catch(() => {});
+        if (audio) audio.play().catch(() => fallbackTTS(cleanText));
         else fallbackTTS(cleanText);
       });
     } else {

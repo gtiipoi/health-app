@@ -1,11 +1,13 @@
-// === 声音克隆服务（简化版）===
+// === 火山引擎 TTS V3 + 系统语音 ===
+// V3 API 支持 Token 认证（不需要复杂的 HMAC 签名）
 
 export interface VoiceCloneSettings {
-  apiKey: string;
-  voiceId: string;
+  appId: string;     // 火山引擎应用ID
+  token: string;     // 访问Token
+  voiceId: string;   // 音色ID（可选，不填用系统默认）
 }
 
-const KEY = 'voice_clone_v2';
+const KEY = 'voice_clone_v3';
 
 export function getVoiceSettings(): VoiceCloneSettings | null {
   try { const r = localStorage.getItem(KEY); return r ? JSON.parse(r) : null; } catch { return null; }
@@ -13,7 +15,7 @@ export function getVoiceSettings(): VoiceCloneSettings | null {
 export function saveVoiceSettings(s: VoiceCloneSettings) { localStorage.setItem(KEY, JSON.stringify(s)); }
 export function clearVoiceSettings() { localStorage.removeItem(KEY); }
 
-// 录制音频
+// 录制
 export async function recordAudio(ms = 30000): Promise<Blob> {
   return new Promise((resolve, reject) => {
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
@@ -21,62 +23,86 @@ export async function recordAudio(ms = 30000): Promise<Blob> {
       const chunks: Blob[] = [];
       mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
       mr.onstop = () => { stream.getTracks().forEach(t => t.stop()); resolve(new Blob(chunks, { type: 'audio/webm' })); };
-      mr.onerror = () => reject(new Error('录音失败'));
       mr.start();
       setTimeout(() => { if (mr.state === 'recording') mr.stop(); }, ms);
-    }).catch(() => reject(new Error('麦克风权限被拒绝，请在浏览器设置中允许')));
+    }).catch(() => reject(new Error('请允许麦克风权限')));
   });
 }
 
-// 克隆声音 (ElevenLabs)
-export async function cloneVoice(apiKey: string, name: string, audioBlob: Blob): Promise<string> {
-  const fd = new FormData();
-  fd.append('name', name);
-  fd.append('files', audioBlob, 'sample.webm');
-  fd.append('description', 'AI宠物声音');
+// ====== 火山引擎 V3 TTS (Token认证) ======
+async function volcTTSV3(appId: string, token: string, text: string, voiceType?: string): Promise<ArrayBuffer> {
+  const body = JSON.stringify({
+    app: { appid: appId, token, cluster: 'volcano_tts' },
+    user: { uid: 'health-app-user' },
+    audio: { voice_type: voiceType || 'BV700_V2_streaming', encoding: 'mp3', speed_ratio: 1.0, rate: 24000 },
+    request: { reqid: crypto.randomUUID(), text, text_type: 'plain', operation: 'query' },
+  });
 
-  const res = await fetch('https://api.elevenlabs.io/v1/voices/add', {
+  const res = await fetch('https://openspeech.bytedance.com/api/v1/tts', {
     method: 'POST',
-    headers: { 'xi-api-key': apiKey },
-    body: fd,
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer;${token}` },
+    body,
   });
 
   if (!res.ok) {
     const err = await res.text();
-    if (res.status === 401) throw new Error('API密钥无效，请检查');
-    if (res.status === 429) throw new Error('请求太频繁，请稍后再试');
+    if (res.status === 401 || res.status === 403) throw new Error('认证失败，请检查 App ID 和 Token');
+    throw new Error(`TTS错误(${res.status}): ${err.slice(0, 200)}`);
+  }
+
+  // Response is JSON with base64 audio
+  const data = await res.json();
+  if (data.code !== 3000 && data.message) throw new Error(data.message);
+
+  const audioBase64 = data.audio?.data || data.data;
+  if (!audioBase64) throw new Error('未返回音频数据');
+
+  const binary = atob(audioBase64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+// 创建复刻音色（上传音频→获得voice_id）
+export async function cloneVoiceVolc(appId: string, token: string, name: string, audioBlob: Blob): Promise<string> {
+  // Convert audio to base64
+  const base64 = await new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(',')[1]);
+    reader.readAsDataURL(audioBlob);
+  });
+
+  const body = JSON.stringify({
+    app: { appid: appId, token, cluster: 'volcano_tts' },
+    user: { uid: 'health-app-user' },
+    audio: { encoding: 'mp3', sample_rate: 24000 },
+    request: { reqid: crypto.randomUUID(), operation: 'copy', target_voice_name: name, audio_data: base64 },
+  });
+
+  const res = await fetch('https://openspeech.bytedance.com/api/v1/voice_clone', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer;${token}` },
+    body,
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    if (res.status === 401) throw new Error('认证失败，请检查Token');
     throw new Error(`克隆失败(${res.status}): ${err.slice(0, 200)}`);
   }
+
   const data = await res.json();
-  return data.voice_id;
+  if (data.code === 3000) return data.voice_id || data.voice_type || '';
+  if (data.message) throw new Error(data.message);
+  throw new Error('克隆失败，请重试');
 }
 
-// 生成语音
-export async function generateSpeech(apiKey: string, voiceId: string, text: string): Promise<ArrayBuffer> {
-  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-    method: 'POST',
-    headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
-    body: JSON.stringify({
-      text,
-      model_id: 'eleven_multilingual_v2',
-      voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.3, use_speaker_boost: true },
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    if (res.status === 401) throw new Error('API密钥无效');
-    if (res.status === 429) throw new Error('免费额度用完了');
-    throw new Error(`TTS失败(${res.status}): ${err.slice(0, 200)}`);
-  }
-  return res.arrayBuffer();
-}
-
-// 用克隆声音说话
+// 用复刻音色说话
 export async function speakWithClonedVoice(text: string): Promise<HTMLAudioElement | null> {
   const s = getVoiceSettings();
   if (!s) return null;
   try {
-    const data = await generateSpeech(s.apiKey, s.voiceId, text);
+    const data = await volcTTSV3(s.appId, s.token, text, s.voiceId || undefined);
     const blob = new Blob([data], { type: 'audio/mpeg' });
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
