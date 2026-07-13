@@ -43,7 +43,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins,
-    base: './',
+    base: isStandalone ? './' : '/health-app/',
     server: {
       host: '0.0.0.0',
       port: 5173,

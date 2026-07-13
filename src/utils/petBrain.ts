@@ -7,9 +7,10 @@ export interface PetThought {
   mood: PetMood;
 }
 
-// ====== Smart rule-based engine (immediate, no API call) ======
+// ====== Smart rule-based engine (immediate, no API call, error-proof) ======
 export async function petThink(): Promise<PetThought> {
-  const profile = await db.userProfile.get(1);
+  try {
+    const profile = await db.userProfile.get(1);
   const today = new Date().toISOString().split('T')[0];
   const hour = new Date().getHours();
   const dayOfWeek = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][new Date().getDay()];
@@ -131,6 +132,9 @@ export async function petThink(): Promise<PetThought> {
   }
 
   return { message: `${dayOfWeek}愉快${name}！💪 今日已摄入${totalCal}kcal${totalExercise > 0 ? '，消耗' + totalExercise + 'kcal' : ''}。继续保持！`, mood: 'happy' };
+  } catch {
+    return { message: '我在呢~有什么需要帮助的吗？', mood: 'happy' };
+  }
 }
 
 // ====== AI-enhanced thinking (optional, user triggered) ======
