@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { PetMood } from '../utils/petDialog';
 import { getVoiceSettings, speakWithClonedVoice } from '../utils/voiceClone';
+import { PET_IMAGE } from '../utils/petImage';
 
 export type PetStyle = 'cat' | 'dog' | 'blob' | 'rabbit' | 'custom';
 
@@ -181,7 +182,7 @@ export default function AIPet({ name, message, mood, style, onStyleChange, speak
 
   const renderPet = () => {
     if (style === 'custom') {
-      return <img src="/pet-custom.png" alt="宠物" className="w-24 h-24 object-cover rounded-full shadow-lg border-2 border-amber-300" />;
+      return <img src={PET_IMAGE} alt="宠物" className="w-24 h-24 object-cover rounded-full shadow-lg border-2 border-amber-300" />;
     }
     switch (style) {
       case 'cat': return <CatFace mood={mood} />;
