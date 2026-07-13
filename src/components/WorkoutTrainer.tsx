@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/database';
 import { workoutTemplates, exerciseLibrary, WorkoutTemplate, Exercise } from '../utils/workoutData';
 import { getAIExercisePlan, getAISettings } from '../utils/aiService';
+import { safetyWarnings, getRandomTrainingCheer } from '../utils/petDialog';
 
 function getToday(): string { return new Date().toISOString().split('T')[0]; }
 
@@ -262,6 +263,27 @@ export default function WorkoutTrainer({ onNavigate }: { onNavigate?: (p: any) =
               </div>
             </div>
           )}
+
+          {/* Safety warning */}
+          {currentExercise && safetyWarnings[currentExercise.name] && (
+            <div className="card bg-red-50 border-red-200 animate-pulse">
+              <div className="flex items-start gap-2">
+                <span className="text-lg">😟</span>
+                <div>
+                  <div className="text-sm font-bold text-red-600">小轻的安全提醒</div>
+                  <p className="text-xs text-red-500 mt-1">{safetyWarnings[currentExercise.name]}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Pet encouragement */}
+          <div className="card bg-amber-50 border-amber-200">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🐱</span>
+              <p className="text-sm text-amber-700">小轻说：{getRandomTrainingCheer().text}</p>
+            </div>
+          </div>
 
           {/* Mark complete */}
           <button onClick={markComplete}
