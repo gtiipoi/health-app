@@ -236,6 +236,5 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
   </head>
   <body class="bg-gray-50">
     <div id="root"></div>
-<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/health-app/sw.js').then(()=>{navigator.serviceWorker.ready.then(r=>{r.unregister().then(()=>{caches.keys().then(names=>{names.forEach(n=>caches.delete(n))});location.reload()})})}).catch(()=>{})}</script>
   </body>
 </html>
