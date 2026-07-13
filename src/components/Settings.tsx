@@ -21,15 +21,20 @@ export default function Settings({ onComplete, isSetup }: SettingsProps) {
   const [goal, setGoal] = useState<UserProfile['goal']>('maintain');
   const [saved, setSaved] = useState(false);
 
+  // Load profile + latest weight
   useEffect(() => {
     if (profile) {
-      setName(profile.name);
+      setName(profile.name || '');
       setGender(profile.gender);
-      setBirthYear(profile.birthYear);
-      setHeight(profile.height);
-      setGoalWeight(profile.goalWeight);
+      setBirthYear(profile.birthYear || 1995);
+      setHeight(profile.height || 170);
+      setGoalWeight(profile.goalWeight || 60);
       setActivityLevel(profile.activityLevel);
       setGoal(profile.goal);
+      // Load actual current weight from weight entries
+      db.weightEntries.orderBy('date').reverse().first().then(w => {
+        if (w) setCurrentWeight(w.weight);
+      });
     }
   }, [profile]);
 
@@ -59,12 +64,15 @@ export default function Settings({ onComplete, isSetup }: SettingsProps) {
       await db.userProfile.put(data);
     }
 
-    // Also add initial weight entry
-    await db.weightEntries.add({
-      date: new Date().toISOString().split('T')[0],
-      weight: currentWeight,
-      note: '初始体重',
-    });
+    // Only add weight entry if changed or first time
+    const latestWeight = await db.weightEntries.orderBy('date').reverse().first();
+    if (!latestWeight || Math.abs(latestWeight.weight - currentWeight) > 0.1) {
+      await db.weightEntries.add({
+        date: new Date().toISOString().split('T')[0],
+        weight: currentWeight,
+        note: '更新资料',
+      });
+    }
 
     setSaved(true);
     setTimeout(() => {

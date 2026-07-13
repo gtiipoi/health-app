@@ -49,11 +49,19 @@ export default function Dashboard({ onNavigate }: { onNavigate: (p: any) => void
   const offset = circumference - (pct / 100) * circumference;
   const ringColor = pct > 100 ? '#f87171' : pct > 85 ? '#fbbf24' : '#34d399';
 
-  // Fast rule-based pet greeting (instant)
+  // Fast rule-based pet greeting (instant, with timeout protection)
   const refreshPet = useCallback(async () => {
-    const thought = await petThink();
-    setPetMsg(thought.message);
-    setPetMood(thought.mood);
+    try {
+      const thought = await Promise.race([
+        petThink(),
+        new Promise<PetThought>((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
+      ]);
+      setPetMsg(thought.message);
+      setPetMood(thought.mood);
+    } catch {
+      setPetMsg('我在呢~今天也要加油哦！💪');
+      setPetMood('happy');
+    }
   }, []);
 
   // AI-enhanced upgrade (on button press)
