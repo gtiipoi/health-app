@@ -117,9 +117,9 @@ export default function Dashboard({ onNavigate }: { onNavigate: (p: any) => void
       {/* AI Quick Actions */}
       <div className="grid grid-cols-2 gap-3">
         {[
+          { label: '🏋️ AI 训练计划', page: 'workout', icon: '🏋️' },
           { label: '📋 AI 饮食计划', page: 'ai', icon: '📋' },
-          { label: '🏃 AI 运动计划', page: 'ai', icon: '🏃' },
-          { label: '🍳 AI 生成食谱', page: 'recipes', icon: '🍳' },
+          { label: '📊 AI 健康周报', page: 'report', icon: '📊' },
           { label: '💬 AI 健康问答', page: 'ai', icon: '💬' },
         ].map(a => (
           <button key={a.label} onClick={() => onNavigate(a.page)}

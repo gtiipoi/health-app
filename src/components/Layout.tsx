@@ -12,6 +12,7 @@ type Page =
   | 'water'
   | 'body'
   | 'report'
+  | 'workout'
   | 'settings';
 
 interface LayoutProps {
@@ -23,7 +24,7 @@ interface LayoutProps {
 const navItems: { key: Page; label: string; icon: string }[] = [
   { key: 'dashboard', label: '首页', icon: '📊' },
   { key: 'diary', label: '饮食', icon: '🍽️' },
-  { key: 'water', label: '饮水', icon: '💧' },
+  { key: 'workout', label: '训练', icon: '🏋️' },
   { key: 'ai', label: 'AI', icon: '🤖' },
   { key: 'settings', label: '我的', icon: '⚙️' },
 ];

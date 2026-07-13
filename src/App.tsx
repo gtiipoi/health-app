@@ -14,6 +14,7 @@ import AICoach from './components/AICoach';
 import WaterTracker from './components/WaterTracker';
 import BodyMeasurements from './components/BodyMeasurements';
 import WeeklyReport from './components/WeeklyReport';
+import WorkoutTrainer from './components/WorkoutTrainer';
 
 type Page =
   | 'dashboard'
@@ -27,6 +28,7 @@ type Page =
   | 'water'
   | 'body'
   | 'report'
+  | 'workout'
   | 'settings';
 
 export default function App() {
@@ -73,6 +75,8 @@ export default function App() {
         return <BodyMeasurements />;
       case 'report':
         return <WeeklyReport onNavigate={setCurrentPage} />;
+      case 'workout':
+        return <WorkoutTrainer onNavigate={setCurrentPage} />;
       case 'settings':
         return <Settings onComplete={handleSetupComplete} />;
       default:
