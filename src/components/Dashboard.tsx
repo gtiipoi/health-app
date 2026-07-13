@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/database';
 import { calculateTDEE, getCalorieTarget, calculateBMR } from '../utils/foodData';
 import { getAIDashboardInsight, getAISettings } from '../utils/aiService';
-import { getTimeGreeting, getFirstOpenGreeting, dietPhrases, trainingPhrases, waterPhrases, weightPhrases, getRandomCompliment, PetPhrase } from '../utils/petDialog';
+import { petThink, PetThought } from '../utils/petBrain';
 import AIPet, { PetStyle } from './AIPet';
 
 function getToday(): string { return new Date().toISOString().split('T')[0]; }
@@ -21,12 +21,13 @@ export default function Dashboard({ onNavigate }: { onNavigate: (p: any) => void
   const todayExercise = useLiveQuery(() => db.exerciseEntries.where('date').equals(today).toArray());
 
   // Pet state
-  const [petMsg, setPetMsg] = useState('');
-  const [petMood, setPetMood] = useState<PetPhrase['mood']>('welcoming');
-  const [petStyle, setPetStyle] = useState<PetStyle>(() => (localStorage.getItem(PET_STORAGE_KEY) as PetStyle) || 'cat');
+  const [petMsg, setPetMsg] = useState('正在思考... 🤔');
+  const [petMood, setPetMood] = useState<PetThought['mood']>('welcoming');
+  const [petStyle, setPetStyle] = useState<PetStyle>(() => (localStorage.getItem(PET_STORAGE_KEY) as PetStyle) || 'custom');
   const [petName, setPetName] = useState(() => localStorage.getItem(PET_NAME_KEY) || '小轻');
   const [speaking, setSpeaking] = useState(true);
   const [showPetSettings, setShowPetSettings] = useState(false);
+  const [petLoading, setPetLoading] = useState(false);
 
   const [aiInsight, setAiInsight] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -48,14 +49,27 @@ export default function Dashboard({ onNavigate }: { onNavigate: (p: any) => void
   const offset = circumference - (pct / 100) * circumference;
   const ringColor = pct > 100 ? '#f87171' : pct > 85 ? '#fbbf24' : '#34d399';
 
-  // Generate pet greeting + reminders
-  useEffect(() => {
-    const userName = profile?.name || '朋友';
-    const baseGreeting = Math.random() > 0.5 ? getTimeGreeting(userName) : getFirstOpenGreeting(userName);
-    setPetMsg(baseGreeting.text);
-    setPetMood(baseGreeting.mood);
+  // AI Pet Brain - autonomous thinking
+  const refreshPet = useCallback(async () => {
+    setPetLoading(true);
+    setPetMsg('让我看看你的数据... 🔍');
+    try {
+      const thought = await petThink();
+      setPetMsg(thought.message);
+      setPetMood(thought.mood);
+    } catch {
+      setPetMsg('主人今天过得怎么样？我一直在这儿呢~');
+      setPetMood('happy');
+    }
+    setPetLoading(false);
+  }, []);
 
-    // Build reminders
+  useEffect(() => {
+    refreshPet();
+  }, []); // Only on first load
+
+  // Build data-driven reminders
+  useEffect(() => {
     const r: string[] = [];
     const hour = new Date().getHours();
     const breakfast = todayFoods?.filter(f => f.mealType === 'breakfast');
@@ -70,7 +84,6 @@ export default function Dashboard({ onNavigate }: { onNavigate: (p: any) => void
       if (recentChange < -1) r.push('🎉 体重在下降！趋势很好！');
     }
     if (r.length === 0) r.push('✅ 今天一切都很好！');
-
     setReminders(r);
   }, [profile, todayFoods, todayWater, todayExercise]);
 
@@ -105,8 +118,12 @@ export default function Dashboard({ onNavigate }: { onNavigate: (p: any) => void
           speaking={speaking}
         />
 
-        {/* Pet settings */}
-        <div className="flex justify-center gap-3 mt-3">
+        {/* Pet controls */}
+        <div className="flex justify-center gap-2 mt-3 flex-wrap">
+          <button onClick={refreshPet} disabled={petLoading}
+            className="text-[10px] px-2 py-1 rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 disabled:opacity-50">
+            {petLoading ? '🤔 思考中...' : '🧠 让宠物思考'}
+          </button>
           <button onClick={() => setSpeaking(!speaking)}
             className={`text-[10px] px-2 py-1 rounded-full ${speaking ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-400'}`}>
             {speaking ? '🔊 语音开' : '🔇 语音关'}
