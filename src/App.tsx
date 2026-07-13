@@ -11,6 +11,9 @@ import BarcodeScanner from './components/BarcodeScanner';
 import Recipes from './components/Recipes';
 import Settings from './components/Settings';
 import AICoach from './components/AICoach';
+import WaterTracker from './components/WaterTracker';
+import BodyMeasurements from './components/BodyMeasurements';
+import WeeklyReport from './components/WeeklyReport';
 
 type Page =
   | 'dashboard'
@@ -21,6 +24,9 @@ type Page =
   | 'scanner'
   | 'recipes'
   | 'ai'
+  | 'water'
+  | 'body'
+  | 'report'
   | 'settings';
 
 export default function App() {
@@ -52,15 +58,21 @@ export default function App() {
       case 'search':
         return <FoodSearch />;
       case 'weight':
-        return <WeightTracker />;
+        return <WeightTracker onNavigate={setCurrentPage} />;
       case 'exercise':
-        return <ExerciseLog />;
+        return <ExerciseLog onNavigate={setCurrentPage} />;
       case 'scanner':
         return <BarcodeScanner />;
       case 'recipes':
-        return <Recipes />;
+        return <Recipes onNavigate={setCurrentPage} />;
       case 'ai':
         return <AICoach />;
+      case 'water':
+        return <WaterTracker />;
+      case 'body':
+        return <BodyMeasurements />;
+      case 'report':
+        return <WeeklyReport onNavigate={setCurrentPage} />;
       case 'settings':
         return <Settings onComplete={handleSetupComplete} />;
       default:

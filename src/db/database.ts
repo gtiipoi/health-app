@@ -20,6 +20,25 @@ export interface WeightEntry {
   note?: string;
 }
 
+export interface WaterEntry {
+  id?: number;
+  date: string;
+  amount: number; // ml
+  time: string; // HH:MM
+}
+
+export interface BodyMeasurement {
+  id?: number;
+  date: string;
+  waist?: number;  // cm
+  hip?: number;
+  chest?: number;
+  arm?: number;
+  thigh?: number;
+  bodyFat?: number; // percentage
+  note?: string;
+}
+
 export interface FoodEntry {
   id?: number;
   date: string; // YYYY-MM-DD
@@ -73,15 +92,19 @@ class HealthDatabase extends Dexie {
   foodEntries!: Table<FoodEntry, number>;
   exerciseEntries!: Table<ExerciseEntry, number>;
   customFoods!: Table<CustomFood, number>;
+  waterEntries!: Table<WaterEntry, number>;
+  bodyMeasurements!: Table<BodyMeasurement, number>;
 
   constructor() {
     super('HealthAppDB');
-    this.version(1).stores({
+    this.version(2).stores({
       userProfile: 'id',
       weightEntries: '++id, date',
       foodEntries: '++id, date, mealType',
       exerciseEntries: '++id, date',
       customFoods: '++id, name, category',
+      waterEntries: '++id, date',
+      bodyMeasurements: '++id, date',
     });
   }
 
@@ -129,6 +152,15 @@ class HealthDatabase extends Dexie {
       summaries.push(await this.getDailySummary(dateStr));
     }
     return summaries;
+  }
+
+  async getTodayWater(date: string): Promise<number> {
+    const entries = await this.waterEntries.where('date').equals(date).toArray();
+    return entries.reduce((s, e) => s + e.amount, 0);
+  }
+
+  async getLatestMeasurements(): Promise<BodyMeasurement | undefined> {
+    return this.bodyMeasurements.orderBy('date').reverse().first();
   }
 }
 
