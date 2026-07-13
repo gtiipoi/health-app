@@ -128,6 +128,10 @@ export default function Dashboard({ onNavigate }: { onNavigate: (p: any) => void
             className={`text-[10px] px-2 py-1 rounded-full ${speaking ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-400'}`}>
             {speaking ? '🔊 语音开' : '🔇 语音关'}
           </button>
+          <button onClick={() => onNavigate('voice')}
+            className="text-[10px] px-2 py-1 rounded-full bg-pink-100 text-pink-600 hover:bg-pink-200">
+            🎤 声音克隆
+          </button>
           {showPetSettings && (
             <input value={petName} onChange={e => handlePetNameChange(e.target.value)}
               className="text-xs w-16 text-center border rounded-full px-2 py-1" placeholder="名字" />

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { PetMood } from '../utils/petDialog';
+import { getVoiceSettings, speakWithClonedVoice } from '../utils/voiceClone';
 
 export type PetStyle = 'cat' | 'dog' | 'blob' | 'rabbit' | 'custom';
 
@@ -130,27 +131,44 @@ export default function AIPet({ name, message, mood, style, onStyleChange, speak
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }, []);
 
-  // Speak without emoji
+  // Speak - prefer cloned voice, fallback to Web Speech API
   useEffect(() => {
-    if (speaking && message && 'speechSynthesis' in window) {
+    if (!speaking || !message) return;
+    const cleanText = stripEmoji(message);
+    if (!cleanText) return;
+
+    // Try cloned voice first
+    const cloneSettings = getVoiceSettings();
+    if (cloneSettings) {
       window.speechSynthesis.cancel();
-      const cleanText = stripEmoji(message);
-      if (!cleanText) return;
-      const utter = new SpeechSynthesisUtterance(cleanText);
-      utter.lang = 'zh-CN';
-      utter.rate = 0.95;
-      utter.pitch = 1.15;
-      if (voiceName) {
-        const v = availableVoices.find(v => v.name === voiceName);
-        if (v) utter.voice = v;
-      } else {
-        const zhVoice = availableVoices.find(v => v.lang.includes('zh-CN') || v.lang.includes('zh-HK') || v.lang.includes('zh-TW'));
-        if (zhVoice) utter.voice = zhVoice;
-      }
-      window.speechSynthesis.speak(utter);
+      speakWithClonedVoice(cleanText).then(audio => {
+        if (audio) audio.play().catch(() => {});
+        else fallbackTTS(cleanText);
+      });
+    } else {
+      fallbackTTS(cleanText);
     }
+
     return () => { window.speechSynthesis.cancel(); };
-  }, [message, speaking, voiceName, availableVoices]);
+  }, [message, speaking]);
+
+  // Fallback TTS function
+  function fallbackTTS(text: string) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'zh-CN';
+    utter.rate = 0.95;
+    utter.pitch = 1.15;
+    if (voiceName) {
+      const v = availableVoices.find(v => v.name === voiceName);
+      if (v) utter.voice = v;
+    } else {
+      const zhVoice = availableVoices.find(v => v.lang.includes('zh-CN') || v.lang.includes('zh-HK') || v.lang.includes('zh-TW'));
+      if (zhVoice) utter.voice = zhVoice;
+    }
+    window.speechSynthesis.speak(utter);
+  }
 
   // Bounce on new message
   useEffect(() => {

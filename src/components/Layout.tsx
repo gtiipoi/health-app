@@ -13,6 +13,7 @@ type Page =
   | 'body'
   | 'report'
   | 'workout'
+  | 'voice'
   | 'settings';
 
 interface LayoutProps {

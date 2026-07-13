@@ -15,6 +15,7 @@ import WaterTracker from './components/WaterTracker';
 import BodyMeasurements from './components/BodyMeasurements';
 import WeeklyReport from './components/WeeklyReport';
 import WorkoutTrainer from './components/WorkoutTrainer';
+import VoiceCloneSetup from './components/VoiceCloneSetup';
 
 type Page =
   | 'dashboard'
@@ -29,6 +30,7 @@ type Page =
   | 'body'
   | 'report'
   | 'workout'
+  | 'voice'
   | 'settings';
 
 export default function App() {
@@ -77,6 +79,8 @@ export default function App() {
         return <WeeklyReport onNavigate={setCurrentPage} />;
       case 'workout':
         return <WorkoutTrainer onNavigate={setCurrentPage} />;
+      case 'voice':
+        return <VoiceCloneSetup />;
       case 'settings':
         return <Settings onComplete={handleSetupComplete} />;
       default:
